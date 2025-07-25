@@ -1,0 +1,1770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Animated Dashboard</title>
+    <!-- Tailwind CSS CDN for basic styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Inter font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-bg: #1a1a1a; /* Black */
+            --secondary-bg: #2d0000; /* Dark Red */
+            --text-color: #e0e0e0;
+            --accent-color: #ff4d4d; /* Bright Red */
+            --border-color: #444;
+            --card-bg: #2a2a2a;
+            --input-bg: #3a3a3a;
+            --button-bg: #ff4d4d;
+            --button-text: #ffffff;
+            --hover-bg: #ff6666;
+        }
+
+        .dark-red-theme {
+            --primary-bg: #2d0000;
+            --secondary-bg: #1a1a1a;
+            --text-color: #f0f0f0;
+            --accent-color: #ff8c00; /* Orange-ish for contrast */
+            --border-color: #660000;
+            --card-bg: #3d0000;
+            --input-bg: #4d0000;
+            --button-bg: #ff8c00;
+            --button-text: #ffffff;
+            --hover-bg: #ffa033;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--primary-bg);
+            color: var(--text-color);
+            transition: background-color 0.3s ease, color 0.3s ease;
+            overflow-x: hidden; /* Prevent horizontal scroll */
+        }
+
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.6; /* So content is visible */
+        }
+
+        .dashboard-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 250px;
+            background-color: var(--secondary-bg);
+            padding: 20px;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
+            position: fixed;
+            height: 100%;
+            overflow-y: auto;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease-in-out;
+            z-index: 1000;
+            border-right: 1px solid var(--border-color);
+        }
+
+        .sidebar.open {
+            transform: translateX(0);
+        }
+
+        .sidebar-toggle {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background-color: var(--accent-color);
+            color: var(--button-text);
+            padding: 10px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            z-index: 1001;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.3s ease;
+        }
+
+        .sidebar-toggle:hover {
+            background-color: var(--hover-bg);
+        }
+
+        .sidebar ul li {
+            margin-bottom: 10px;
+        }
+
+        .sidebar ul li a {
+            display: block;
+            padding: 10px 15px;
+            color: var(--text-color);
+            text-decoration: none;
+            border-radius: 8px;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+
+        .sidebar ul li a:hover,
+        .sidebar ul li a.active {
+            background-color: var(--accent-color);
+            color: var(--button-text);
+        }
+
+        .main-content {
+            flex-grow: 1;
+            padding: 20px;
+            margin-left: 0; /* Adjusted by JS when sidebar is open */
+            transition: margin-left 0.3s ease-in-out;
+            padding-top: 80px; /* Space for toggle button */
+        }
+
+        .main-content.shifted {
+            margin-left: 250px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+        }
+
+        .card h2 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: var(--accent-color);
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            outline: none;
+        }
+
+        .btn {
+            background-color: var(--button-bg);
+            color: var(--button-text);
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            font-weight: 500;
+        }
+
+        .btn:hover {
+            background-color: var(--hover-bg);
+            transform: translateY(-2px);
+        }
+
+        .grid-cols-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .footer {
+            background-color: var(--secondary-bg);
+            color: var(--text-color);
+            padding: 20px;
+            text-align: center;
+            border-top: 1px solid var(--border-color);
+            margin-top: 40px;
+        }
+
+        .social-icons a {
+            color: var(--text-color);
+            font-size: 1.5rem;
+            margin: 0 10px;
+            transition: color 0.3s ease;
+        }
+
+        .social-icons a:hover {
+            color: var(--accent-color);
+        }
+
+        /* Calendar specific styles */
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+            text-align: center;
+        }
+
+        .day-name, .day-cell {
+            padding: 10px;
+            border-radius: 8px;
+            background-color: var(--input-bg);
+        }
+
+        .day-name {
+            font-weight: bold;
+            background-color: var(--secondary-bg);
+        }
+
+        .day-cell.current-day {
+            background-color: var(--accent-color);
+            color: var(--button-text);
+            font-weight: bold;
+        }
+
+        .todo-list ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .todo-list li {
+            background-color: var(--input-bg);
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .todo-list li .delete-todo {
+            background: none;
+            border: none;
+            color: var(--accent-color);
+            cursor: pointer;
+            font-size: 1.2em;
+            transition: color 0.3s ease;
+        }
+
+        .todo-list li .delete-todo:hover {
+            color: var(--hover-bg);
+        }
+
+        /* Calculator styles */
+        .calculator-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        .calculator-display {
+            grid-column: span 4;
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            font-size: 2.5em;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: right;
+            margin-bottom: 10px;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+
+        .calculator-grid button {
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            padding: 15px;
+            font-size: 1.5em;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+        }
+
+        .calculator-grid button:hover {
+            background-color: var(--accent-color);
+            color: var(--button-text);
+            transform: scale(1.02);
+        }
+
+        .calculator-grid button.operator {
+            background-color: var(--accent-color);
+            color: var(--button-text);
+        }
+
+        .calculator-grid button.operator:hover {
+            background-color: var(--hover-bg);
+        }
+
+        .calculator-grid button.equal {
+            grid-column: span 2;
+            background-color: var(--accent-color);
+            color: var(--button-text);
+        }
+
+        .calculator-grid button.equal:hover {
+            background-color: var(--hover-bg);
+        }
+
+        /* CGPA/GPA Calculator */
+        .grade-input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+
+        .grade-input-group input {
+            flex: 1;
+        }
+
+        .grade-input-group button {
+            flex-shrink: 0;
+            padding: 8px 12px;
+            font-size: 0.9em;
+        }
+
+        #gpa-results, #cgpa-results {
+            margin-top: 20px;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: var(--accent-color);
+        }
+
+        /* Currency Converter */
+        .currency-input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .currency-input-group input,
+        .currency-input-group select {
+            flex: 1;
+        }
+
+        #conversion-result {
+            margin-top: 20px;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: var(--accent-color);
+        }
+
+        /* Profile System */
+        .profile-image-container {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background-color: var(--input-bg);
+            border: 2px solid var(--border-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            margin: 0 auto 20px;
+        }
+
+        .profile-image-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Media Upload/Meme Section */
+        .media-grid, .meme-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .media-item, .meme-item {
+            background-color: var(--input-bg);
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            position: relative;
+            padding-bottom: 100%; /* For aspect ratio */
+        }
+
+        .media-item img, .meme-item img,
+        .media-item video, .meme-item video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .meme-actions {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 5px;
+            display: flex;
+            justify-content: space-around;
+            font-size: 0.9em;
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+        }
+
+        .meme-item:hover .meme-actions {
+            transform: translateY(0);
+        }
+
+        .meme-actions button {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 5px;
+            transition: color 0.2s ease;
+        }
+
+        .meme-actions button:hover {
+            color: var(--accent-color);
+        }
+
+        /* Custom Modal */
+        .custom-modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 10000; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgba(0, 0, 0, 0.7); /* Black w/ opacity */
+            justify-content: center;
+            align-items: center;
+        }
+
+        .custom-modal-content {
+            background-color: var(--card-bg);
+            margin: auto;
+            padding: 30px;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            width: 80%;
+            max-width: 500px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+
+        .custom-modal-content h3 {
+            color: var(--accent-color);
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+
+        .custom-modal-content p {
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+
+        .custom-modal-buttons button {
+            margin: 0 10px;
+            min-width: 100px;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 200px;
+            }
+            .main-content.shifted {
+                margin-left: 200px;
+            }
+            .sidebar-toggle {
+                left: 10px;
+                top: 10px;
+            }
+            .main-content {
+                padding: 15px;
+                padding-top: 60px;
+            }
+            .card {
+                padding: 15px;
+            }
+            .card h2 {
+                font-size: 1.5rem;
+            }
+            .calculator-display {
+                font-size: 2em;
+            }
+            .calculator-grid button {
+                font-size: 1.2em;
+                padding: 10px;
+            }
+            .grid-cols-2 {
+                grid-template-columns: 1fr;
+            }
+            .media-grid, .meme-grid {
+                grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+                gap: 10px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .sidebar {
+                width: 100%;
+                transform: translateX(-100%);
+                border-right: none;
+            }
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            .main-content.shifted {
+                margin-left: 0;
+            }
+            .sidebar-toggle {
+                left: 10px;
+                top: 10px;
+            }
+            .main-content {
+                padding: 10px;
+                padding-top: 60px;
+            }
+            .card h2 {
+                font-size: 1.3rem;
+            }
+            .calculator-display {
+                font-size: 1.8em;
+            }
+            .calculator-grid button {
+                font-size: 1em;
+            }
+        }
+    </style>
+</head>
+<body class="black-theme">
+    <div id="canvas-container"></div>
+
+    <div class="sidebar-toggle" id="sidebar-toggle">
+        <i class="fas fa-bars"></i>
+    </div>
+
+    <div class="dashboard-container">
+        <aside class="sidebar" id="sidebar">
+            <h1 class="text-2xl font-bold text-center mb-8 text-accent-color">Dashboard</h1>
+            <ul>
+                <li><a href="#home" class="active"><i class="fas fa-home mr-2"></i> Home</a></li>
+                <li><a href="#calendar"><i class="fas fa-calendar-alt mr-2"></i> Calendar & To-Do</a></li>
+                <li><a href="#calculator"><i class="fas fa-calculator mr-2"></i> Calculator</a></li>
+                <li><a href="#gpa-cgpa"><i class="fas fa-graduation-cap mr-2"></i> GPA/CGPA</a></li>
+                <li><a href="#currency"><i class="fas fa-money-bill-wave mr-2"></i> Currency Converter</a></li>
+                <li><a href="#study-materials"><i class="fas fa-book mr-2"></i> Study Materials</a></li>
+                <li><a href="#profile"><i class="fas fa-user-circle mr-2"></i> Profile System</a></li>
+                <li><a href="#math-solver"><i class="fas fa-superscript mr-2"></i> Math Solver</a></li>
+                <li><a href="#knowledge-base"><i class="fas fa-lightbulb mr-2"></i> Knowledge Base</a></li>
+                <li><a href="#media-explore"><i class="fas fa-image mr-2"></i> Media Explore</a></li>
+                <li><a href="#memes"><i class="fas fa-laugh-squint mr-2"></i> Memes</a></li>
+            </ul>
+            <div class="mt-8">
+                <h3 class="text-lg font-semibold mb-4">Theme</h3>
+                <button id="theme-toggle" class="btn w-full">Toggle Theme</button>
+            </div>
+        </aside>
+
+        <main class="main-content" id="main-content">
+            <section id="home" class="card">
+                <h2>Welcome to Your 3D Dashboard!</h2>
+                <p>Explore the various features available in your personalized web dashboard. Use the sidebar to navigate.</p>
+                <div class="mt-4">
+                    <img src="https://placehold.co/600x300/2d0000/ff4d4d?text=AI+Generated+Dashboard+Concept" alt="Dashboard Concept" class="w-full h-auto rounded-lg shadow-md">
+                    <p class="text-sm text-gray-400 mt-2">This image is a placeholder for AI-generated content.</p>
+                </div>
+            </section>
+
+            <section id="calendar" class="card hidden">
+                <h2>Calendar & To-Do List</h2>
+                <div class="calendar-header">
+                    <button class="btn" id="prevMonth"><i class="fas fa-chevron-left"></i></button>
+                    <h3 id="currentMonthYear" class="text-xl font-semibold"></h3>
+                    <button class="btn" id="nextMonth"><i class="fas fa-chevron-right"></i></button>
+                </div>
+                <div class="calendar-grid" id="calendar-grid"></div>
+
+                <h3 class="text-xl font-semibold mt-8 mb-4">To-Do List</h3>
+                <div class="form-group flex gap-2">
+                    <input type="text" id="todo-input" placeholder="Add a new to-do item...">
+                    <button class="btn" id="add-todo">Add</button>
+                </div>
+                <div class="todo-list">
+                    <ul id="todo-items"></ul>
+                </div>
+            </section>
+
+            <section id="calculator" class="card hidden">
+                <h2>Perfect Logical Calculator</h2>
+                <div class="calculator-display" id="calculator-display">0</div>
+                <div class="calculator-grid">
+                    <button class="operator" data-value="C">C</button>
+                    <button class="operator" data-value="DEL">DEL</button>
+                    <button class="operator" data-value="%">%</button>
+                    <button class="operator" data-value="/">/</button>
+                    <button data-value="7">7</button>
+                    <button data-value="8">8</button>
+                    <button data-value="9">9</button>
+                    <button class="operator" data-value="*">x</button>
+                    <button data-value="4">4</button>
+                    <button data-value="5">5</button>
+                    <button data-value="6">6</button>
+                    <button class="operator" data-value="-">-</button>
+                    <button data-value="1">1</button>
+                    <button data-value="2">2</button>
+                    <button data-value="3">3</button>
+                    <button class="operator" data-value="+">+</button>
+                    <button data-value="00">00</button>
+                    <button data-value="0">0</button>
+                    <button data-value=".">.</button>
+                    <button class="equal" data-value="=">=</button>
+                </div>
+            </section>
+
+            <section id="gpa-cgpa" class="card hidden">
+                <h2>GPA and CGPA Calculator</h2>
+
+                <h3 class="text-xl font-semibold mb-4">GPA Calculator</h3>
+                <div id="gpa-inputs">
+                    <div class="grade-input-group">
+                        <input type="number" placeholder="Credit Hours" class="gpa-credit-input rounded-lg" min="0" step="0.1">
+                        <input type="number" placeholder="Grade Point (e.g., 3.5)" class="gpa-grade-input rounded-lg" min="0" max="4" step="0.01">
+                        <button class="btn delete-grade-row"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+                <button class="btn mt-4" id="add-gpa-row">Add Course</button>
+                <button class="btn mt-4 ml-2" id="calculate-gpa">Calculate GPA</button>
+                <p id="gpa-results"></p>
+
+                <h3 class="text-xl font-semibold mt-8 mb-4">CGPA Calculator</h3>
+                <div id="cgpa-inputs">
+                    <div class="grade-input-group">
+                        <input type="number" placeholder="Total Credits (Semester)" class="cgpa-credit-input rounded-lg" min="0" step="0.1">
+                        <input type="number" placeholder="GPA (Semester)" class="cgpa-gpa-input rounded-lg" min="0" max="4" step="0.01">
+                        <button class="btn delete-grade-row"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+                <button class="btn mt-4" id="add-cgpa-row">Add Semester</button>
+                <button class="btn mt-4 ml-2" id="calculate-cgpa">Calculate CGPA</button>
+                <p id="cgpa-results"></p>
+            </section>
+
+            <section id="currency" class="card hidden">
+                <h2>Currency Converter</h2>
+                <p class="mb-4 text-sm text-gray-400">Note: Exchange rates are hardcoded and not real-time. For demonstration purposes only.</p>
+                <div class="currency-input-group">
+                    <input type="number" id="amount-to-convert" placeholder="Amount" class="rounded-lg">
+                    <select id="from-currency" class="rounded-lg">
+                        <option value="BDT">BDT - Bangladeshi Taka</option>
+                        <option value="USD">USD - US Dollar</option>
+                        <option value="EUR">EUR - Euro</option>
+                        <option value="AED">AED - UAE Dirham</option>
+                        <option value="INR">INR - Indian Rupee</option>
+                        <option value="PKR">PKR - Pakistani Rupee</option>
+                        <option value="AUD">AUD - Australian Dollar</option>
+                        <option value="SAR">SAR - Saudi Riyal</option>
+                        <option value="GBP">GBP - British Pound</option>
+                        <option value="CAD">CAD - Canadian Dollar</option>
+                        <option value="SGD">SGD - Singapore Dollar</option>
+                        <option value="JPY">JPY - Japanese Yen</option>
+                        <option value="CNY">CNY - Chinese Yuan</option>
+                        <option value="KWD">KWD - Kuwaiti Dinar</option>
+                        <option value="QAR">QAR - Qatari Riyal</option>
+                        <option value="OMR">OMR - Omani Rial</option>
+                        <option value="BHD">BHD - Bahraini Dinar</option>
+                        <option value="MYR">MYR - Malaysian Ringgit</option>
+                        <option value="THB">THB - Thai Baht</option>
+                        <option value="PHP">PHP - Philippine Peso</option>
+                        <option value="VND">VND - Vietnamese Dong</option>
+                        <option value="KRW">KRW - South Korean Won</option>
+                    </select>
+                    <select id="to-currency" class="rounded-lg">
+                        <option value="USD">USD - US Dollar</option>
+                        <option value="BDT">BDT - Bangladeshi Taka</option>
+                        <option value="EUR">EUR - Euro</option>
+                        <option value="AED">AED - UAE Dirham</option>
+                        <option value="INR">INR - Indian Rupee</option>
+                        <option value="PKR">PKR - Pakistani Rupee</option>
+                        <option value="AUD">AUD - Australian Dollar</option>
+                        <option value="SAR">SAR - Saudi Riyal</option>
+                        <option value="GBP">GBP - British Pound</option>
+                        <option value="CAD">CAD - Canadian Dollar</option>
+                        <option value="SGD">SGD - Singapore Dollar</option>
+                        <option value="JPY">JPY - Japanese Yen</option>
+                        <option value="CNY">CNY - Chinese Yuan</option>
+                        <option value="KWD">KWD - Kuwaiti Dinar</option>
+                        <option value="QAR">QAR - Qatari Riyal</option>
+                        <option value="OMR">OMR - Omani Rial</option>
+                        <option value="BHD">BHD - Bahraini Dinar</option>
+                        <option value="MYR">MYR - Malaysian Ringgit</option>
+                        <option value="THB">THB - Thai Baht</option>
+                        <option value="PHP">PHP - Philippine Peso</option>
+                        <option value="VND">VND - Vietnamese Dong</option>
+                        <option value="KRW">KRW - South Korean Won</option>
+                    </select>
+                </div>
+                <button class="btn" id="convert-currency">Convert</button>
+                <p id="conversion-result"></p>
+            </section>
+
+            <section id="study-materials" class="card hidden">
+                <h2>Study Materials & Google Drive Links</h2>
+                <p class="mb-4 text-sm text-gray-400">
+                    Click the buttons below to access various study materials stored on Google Drive.
+                    (Note: These are placeholder links and will open in a new tab.)
+                </p>
+                <div class="grid-cols-2">
+                    <div class="card">
+                        <h3>PDFs & Docs</h3>
+                        <div class="mt-4 flex flex-col gap-3">
+                            <a href="https://drive.google.com/drive/folders/your-pdf-folder-id" target="_blank" class="btn"><i class="fas fa-file-pdf mr-2"></i> Engineering Math Notes</a>
+                            <a href="https://drive.google.com/drive/folders/your-doc-folder-id" target="_blank" class="btn"><i class="fas fa-file-word mr-2"></i> Physics Lab Reports</a>
+                            <a href="https://drive.google.com/drive/folders/your-doc-folder-id" target="_blank" class="btn"><i class="fas fa-file-alt mr-2"></i> Chemistry Study Guides</a>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3>Videos & Images</h3>
+                        <div class="mt-4 flex flex-col gap-3">
+                            <a href="https://drive.google.com/drive/folders/your-video-folder-id" target="_blank" class="btn"><i class="fas fa-video mr-2"></i> Lecture Recordings</a>
+                            <a href="https://drive.google.com/drive/folders/your-image-folder-id" target="_blank" class="btn"><i class="fas fa-image mr-2"></i> Diagram Collection</a>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3>Routines & Schedules</h3>
+                        <div class="mt-4 flex flex-col gap-3">
+                            <a href="https://drive.google.com/drive/folders/your-exam-routine-folder-id" target="_blank" class="btn"><i class="fas fa-calendar-check mr-2"></i> Exam Routine</a>
+                            <a href="https://drive.google.com/drive/folders/your-transport-schedule-folder-id" target="_blank" class="btn"><i class="fas fa-bus mr-2"></i> Transport Schedule</a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="profile" class="card hidden">
+                <h2>Profile / Student Information System</h2>
+                <p class="mb-4 text-sm text-gray-400">
+                    Your profile information is saved locally in your browser.
+                    (Note: Uploading other students' data and sharing requires a backend, which is not implemented here.)
+                </p>
+                <div class="profile-image-container mb-4">
+                    <img id="profile-display-image" src="https://placehold.co/150x150/3a3a3a/e0e0e0?text=Upload+Image" alt="Profile Image">
+                </div>
+                <input type="file" id="profile-image-upload" accept="image/*" class="mb-4 w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-accent-color file:text-white hover:file:bg-hover-bg">
+
+                <div class="grid-cols-2">
+                    <div class="form-group">
+                        <label for="profile-name">Name:</label>
+                        <input type="text" id="profile-name" placeholder="Your Name">
+                    </div>
+                    <div class="form-group">
+                        <label for="profile-mobile">Mobile Number:</label>
+                        <input type="text" id="profile-mobile" placeholder="+8801XXXXXXXXX">
+                    </div>
+                    <div class="form-group">
+                        <label for="profile-whatsapp">WhatsApp Number:</label>
+                        <input type="text" id="profile-whatsapp" placeholder="+8801XXXXXXXXX">
+                    </div>
+                    <div class="form-group">
+                        <label for="profile-facebook">Facebook Link:</label>
+                        <input type="url" id="profile-facebook" placeholder="https://facebook.com/yourprofile">
+                    </div>
+                    <div class="form-group">
+                        <label for="profile-github">GitHub ID/Link:</label>
+                        <input type="text" id="profile-github" placeholder="your_github_id or link">
+                    </div>
+                    <div class="form-group">
+                        <label for="profile-instagram">Instagram Username:</label>
+                        <input type="text" id="profile-instagram" placeholder="@your_instagram">
+                    </div>
+                    <div class="form-group">
+                        <label for="profile-gmail">Gmail Account:</label>
+                        <input type="email" id="profile-gmail" placeholder="your.email@gmail.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="profile-blood">Blood Group:</label>
+                        <select id="profile-blood" class="rounded-lg">
+                            <option value="">Select Blood Group</option>
+                            <option value="A+">A+</option>
+                            <option value="A-">A-</option>
+                            <option value="B+">B+</option>
+                            <option value="B-">B-</option>
+                            <option value="AB+">AB+</option>
+                            <option value="AB-">AB-</option>
+                            <option value="O+">O+</option>
+                            <option value="O-">O-</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="btn mt-4" id="save-profile">Save Profile</button>
+
+                <h3 class="text-xl font-semibold mt-8 mb-4">Other Students' Data (Local Simulation)</h3>
+                <p class="mb-4 text-sm text-gray-400">
+                    This section simulates storing other students' data locally. In a real application, this would require a database.
+                </p>
+                <div class="form-group">
+                    <label for="other-student-name">Student Name:</label>
+                    <input type="text" id="other-student-name" placeholder="Other Student's Name">
+                </div>
+                <div class="form-group">
+                    <label for="other-student-id">Student ID:</label>
+                    <input type="text" id="other-student-id" placeholder="Student ID">
+                </div>
+                <button class="btn" id="add-other-student">Add Other Student Data</button>
+                <div id="other-students-list" class="mt-4 card p-4">
+                    <h4 class="font-semibold mb-2">Stored Students:</h4>
+                    <ul id="other-students-ul"></ul>
+                </div>
+            </section>
+
+            <section id="math-solver" class="card hidden">
+                <h2>Math Solver</h2>
+                <p class="mb-4 text-sm text-gray-400">
+                    This section is designed to solve various mathematical equations, including differential equations.
+                    Due to the complexity of symbolic math computation in a client-side environment without external APIs,
+                    this feature is a placeholder. A full implementation would require a powerful backend math engine.
+                </p>
+                <div class="form-group">
+                    <label for="math-input">Enter Equation (e.g., dy/dx = x^2):</label>
+                    <textarea id="math-input" rows="5" placeholder="Enter your differential equation or math problem here. Examples:
+- dy/dx = x^2 (Variable Separation)
+- (2x + y)dx + (x + 2y)dy = 0 (Exact Equation)
+- dy/dx + P(x)y = Q(x) (Linear Differential Equation)
+- d^2y/dx^2 + 4y = 0 (Linear Differential Equation with Constant Coefficients)
+- Bessel/Legendre Equation form"></textarea>
+                </div>
+                <button class="btn" id="solve-math">Solve Equation</button>
+                <div id="math-solution" class="mt-4 card p-4">
+                    <h4 class="font-semibold mb-2">Solution:</h4>
+                    <p>The solution will appear here (simulated).</p>
+                    <p class="text-sm text-gray-500 mt-2">
+                        For real-world complex math solving, consider using libraries like Math.js for basic algebra, or a dedicated symbolic math backend service for differential equations.
+                    </p>
+                </div>
+            </section>
+
+            <section id="knowledge-base" class="card hidden">
+                <h2>Physics & Electronics Knowledge Base</h2>
+                <p class="mb-4 text-sm text-gray-400">
+                    Explore fundamental concepts in Physics, Basic Electronics, and Electrics.
+                </p>
+
+                <div class="grid-cols-2">
+                    <div class="card">
+                        <h3>Physics Fundamentals</h3>
+                        <ul class="list-disc list-inside mt-4 text-sm">
+                            <li>Newton's Laws of Motion</li>
+                            <li>Law of Conservation of Energy</li>
+                            <li>Electromagnetic Spectrum</li>
+                            <li>Thermodynamics Basics (Laws of Thermodynamics)</li>
+                            <li>Quantum Mechanics (Introduction)</li>
+                        </ul>
+                        <button class="btn mt-4" onclick="showKnowledgeDetail('physics')">Learn More</button>
+                    </div>
+                    <div class="card">
+                        <h3>Basic Electronics</h3>
+                        <ul class="list-disc list-inside mt-4 text-sm">
+                            <li>Ohm's Law and Kirchhoff's Laws</li>
+                            <li>Resistors, Capacitors, Inductors</li>
+                            <li>Diodes and Transistors (Basic Function)</li>
+                            <li>Basic Circuits (Series, Parallel)</li>
+                            <li>Analog vs. Digital Electronics</li>
+                        </ul>
+                        <button class="btn mt-4" onclick="showKnowledgeDetail('electronics')">Learn More</button>
+                    </div>
+                    <div class="card">
+                        <h3>Electrics Concepts</h3>
+                        <ul class="list-disc list-inside mt-4 text-sm">
+                            <li>Electric Charge and Current</li>
+                            <li>Voltage, Resistance, Power</li>
+                            <li>AC vs. DC Current</li>
+                            <li>Magnetism and Electromagnetism</li>
+                            <li>Generators and Motors (Basic Principle)</li>
+                        </ul>
+                        <button class="btn mt-4" onclick="showKnowledgeDetail('electrics')">Learn More</button>
+                    </div>
+                </div>
+                <div id="knowledge-detail" class="mt-8 card hidden">
+                    <h3 id="knowledge-detail-title" class="text-xl font-semibold mb-4"></h3>
+                    <p id="knowledge-detail-content"></p>
+                    <button class="btn mt-4" onclick="hideKnowledgeDetail()">Back to Topics</button>
+                </div>
+            </section>
+
+            <section id="media-explore" class="card hidden">
+                <h2>Media Explore (Upload & Display)</h2>
+                <p class="mb-4 text-sm text-gray-400">
+                    Upload images and videos from your device to display them here.
+                    (Note: Files are stored locally in your browser's storage.)
+                </p>
+                <input type="file" id="media-upload-input" accept="image/*,video/*" multiple class="mb-4 w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-accent-color file:text-white hover:file:bg-hover-bg">
+                <button class="btn" id="upload-media-btn">Upload Selected Media</button>
+                <div id="media-display-grid" class="media-grid"></div>
+            </section>
+
+            <section id="memes" class="card hidden">
+                <h2>Meme Gallery</h2>
+                <p class="mb-4 text-sm text-gray-400">
+                    Upload your favorite memes (images/videos) here.
+                    (Note: Meme generation from the internet is not possible client-side without external APIs.
+                    Content responsibility is with the uploader.)
+                </p>
+                <input type="file" id="meme-upload-input" accept="image/*,video/*" multiple class="mb-4 w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-accent-color file:text-white hover:file:bg-hover-bg">
+                <button class="btn" id="upload-meme-btn">Upload Meme</button>
+                <button class="btn ml-2" id="generate-meme-idea-btn">Generate Meme Idea (AI)</button>
+                <div id="meme-idea-display" class="mt-4 card p-4 hidden">
+                    <h4 class="font-semibold mb-2">AI Meme Idea:</h4>
+                    <p id="meme-idea-text"></p>
+                </div>
+                <div id="meme-display-grid" class="meme-grid"></div>
+            </section>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <p>&copy; 2025 3D Animated Dashboard. All rights reserved.</p>
+        <div class="social-icons mt-4">
+            <a href="https://facebook.com" target="_blank" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+            <a href="https://twitter.com" target="_blank" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
+            <a href="https://linkedin.com" target="_blank" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+            <a href="https://instagram.com" target="_blank" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+            <a href="https://github.com" target="_blank" aria-label="GitHub"><i class="fab fa-github"></i></a>
+            <a href="https://youtube.com" target="_blank" aria-label="YouTube"><i class="fab fa-youtube"></i></a>
+        </div>
+    </footer>
+
+    <!-- Custom Modal for Alerts/Confirms -->
+    <div id="custom-alert-modal" class="custom-modal">
+        <div class="custom-modal-content">
+            <h3 id="modal-title"></h3>
+            <p id="modal-message"></p>
+            <div class="custom-modal-buttons">
+                <button class="btn" id="modal-ok-btn">OK</button>
+                <button class="btn hidden" id="modal-cancel-btn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Three.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Custom Modal Implementation (replaces alert/confirm)
+        function showCustomModal(title, message, type = 'alert', callback = null) {
+            const modal = document.getElementById('custom-alert-modal');
+            const modalTitle = document.getElementById('modal-title');
+            const modalMessage = document.getElementById('modal-message');
+            const okBtn = document.getElementById('modal-ok-btn');
+            const cancelBtn = document.getElementById('modal-cancel-btn');
+
+            modalTitle.textContent = title;
+            modalMessage.textContent = message;
+
+            okBtn.onclick = () => {
+                modal.style.display = 'none';
+                if (callback) callback(true);
+            };
+
+            if (type === 'confirm') {
+                cancelBtn.style.display = 'inline-block';
+                cancelBtn.onclick = () => {
+                    modal.style.display = 'none';
+                    if (callback) callback(false);
+                };
+            } else {
+                cancelBtn.style.display = 'none';
+            }
+
+            modal.style.display = 'flex'; // Use flex to center content
+        }
+
+        window.onload = function () {
+            // Three.js Scene Setup
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            // Add some basic light
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(0, 1, 1);
+            scene.add(directionalLight);
+
+            // Create a simple 3D object (e.g., a rotating cube)
+            const geometry = new THREE.BoxGeometry(1, 1, 1);
+            const material = new THREE.MeshPhongMaterial({ color: 0xff4d4d }); // Accent color
+            const cube = new THREE.Mesh(geometry, material);
+            scene.add(cube);
+
+            camera.position.z = 5;
+
+            // Animation loop
+            function animate() {
+                requestAnimationFrame(animate);
+
+                cube.rotation.x += 0.005;
+                cube.rotation.y += 0.005;
+
+                renderer.render(scene, camera);
+            }
+            animate(); // Start the animation
+
+            // Handle window resize
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+
+            // --- Dashboard Functionality ---
+
+            // Sidebar & Theme Toggle
+            const sidebar = document.getElementById('sidebar');
+            const sidebarToggle = document.getElementById('sidebar-toggle');
+            const mainContent = document.getElementById('main-content');
+            const themeToggle = document.getElementById('theme-toggle');
+            const body = document.body;
+
+            sidebarToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('open');
+                mainContent.classList.toggle('shifted');
+            });
+
+            themeToggle.addEventListener('click', () => {
+                body.classList.toggle('dark-red-theme');
+                // Update cube color based on theme
+                if (body.classList.contains('dark-red-theme')) {
+                    cube.material.color.set(0xff8c00); // Orange-ish for dark red theme
+                } else {
+                    cube.material.color.set(0xff4d4d); // Bright Red for black theme
+                }
+            });
+
+            // Navigation
+            const navLinks = document.querySelectorAll('.sidebar ul li a');
+            const sections = document.querySelectorAll('.main-content section');
+
+            navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    navLinks.forEach(nav => nav.classList.remove('active'));
+                    link.classList.add('active');
+
+                    sections.forEach(section => section.classList.add('hidden'));
+                    const targetId = link.getAttribute('href').substring(1);
+                    document.getElementById(targetId).classList.remove('hidden');
+
+                    // Close sidebar on mobile after navigation
+                    if (window.innerWidth <= 768) {
+                        sidebar.classList.remove('open');
+                        mainContent.classList.remove('shifted');
+                    }
+                });
+            });
+
+            // --- Calendar & To-Do List ---
+            const currentMonthYear = document.getElementById('currentMonthYear');
+            const calendarGrid = document.getElementById('calendar-grid');
+            const prevMonthBtn = document.getElementById('prevMonth');
+            const nextMonthBtn = document.getElementById('nextMonth');
+            const todoInput = document.getElementById('todo-input');
+            const addTodoBtn = document.getElementById('add-todo');
+            const todoItemsList = document.getElementById('todo-items');
+
+            let currentDate = new Date();
+            let todos = JSON.parse(localStorage.getItem('todos')) || [];
+
+            function renderCalendar() {
+                calendarGrid.innerHTML = '';
+                const year = currentDate.getFullYear();
+                const month = currentDate.getMonth();
+                const firstDay = new Date(year, month, 1).getDay();
+                const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+                currentMonthYear.textContent = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+
+                const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                dayNames.forEach(day => {
+                    const dayNameCell = document.createElement('div');
+                    dayNameCell.classList.add('day-name');
+                    dayNameCell.textContent = day;
+                    calendarGrid.appendChild(dayNameCell);
+                });
+
+                for (let i = 0; i < firstDay; i++) {
+                    calendarGrid.appendChild(document.createElement('div')); // Empty cells for padding
+                }
+
+                for (let day = 1; day <= daysInMonth; day++) {
+                    const dayCell = document.createElement('div');
+                    dayCell.classList.add('day-cell');
+                    dayCell.textContent = day;
+                    if (day === new Date().getDate() && month === new Date().getMonth() && year === new Date().getFullYear()) {
+                        dayCell.classList.add('current-day');
+                    }
+                    calendarGrid.appendChild(dayCell);
+                }
+            }
+
+            function renderTodos() {
+                todoItemsList.innerHTML = '';
+                todos.forEach((todo, index) => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `
+                        <span>${todo}</span>
+                        <button class="delete-todo" data-index="${index}"><i class="fas fa-trash"></i></button>
+                    `;
+                    todoItemsList.appendChild(li);
+                });
+                document.querySelectorAll('.delete-todo').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        const index = parseInt(e.currentTarget.dataset.index);
+                        todos.splice(index, 1);
+                        localStorage.setItem('todos', JSON.stringify(todos));
+                        renderTodos();
+                    });
+                });
+            }
+
+            addTodoBtn.addEventListener('click', () => {
+                const todoText = todoInput.value.trim();
+                if (todoText) {
+                    todos.push(todoText);
+                    localStorage.setItem('todos', JSON.stringify(todos));
+                    todoInput.value = '';
+                    renderTodos();
+                } else {
+                    showCustomModal('Input Error', 'Please enter a to-do item.');
+                }
+            });
+
+            prevMonthBtn.addEventListener('click', () => {
+                currentDate.setMonth(currentDate.getMonth() - 1);
+                renderCalendar();
+            });
+
+            nextMonthBtn.addEventListener('click', () => {
+                currentDate.setMonth(currentDate.getMonth() + 1);
+                renderCalendar();
+            });
+
+            renderCalendar();
+            renderTodos();
+
+            // --- Perfect Logical Calculator ---
+            const calculatorDisplay = document.getElementById('calculator-display');
+            const calculatorButtons = document.querySelectorAll('.calculator-grid button');
+            let currentInput = '';
+            let operator = null;
+            let previousInput = '';
+            let resetDisplay = false;
+
+            calculatorButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const value = button.dataset.value;
+
+                    if (value === 'C') {
+                        currentInput = '';
+                        operator = null;
+                        previousInput = '';
+                        calculatorDisplay.textContent = '0';
+                        resetDisplay = false;
+                        return;
+                    }
+
+                    if (value === 'DEL') {
+                        currentInput = currentInput.slice(0, -1);
+                        if (currentInput === '') {
+                            calculatorDisplay.textContent = '0';
+                        } else {
+                            calculatorDisplay.textContent = currentInput;
+                        }
+                        return;
+                    }
+
+                    if (['+', '-', '*', '/', '%'].includes(value)) {
+                        if (currentInput === '' && previousInput === '') return;
+                        if (previousInput !== '' && currentInput === '') { // Change operator
+                            operator = value;
+                            return;
+                        }
+                        if (operator && currentInput !== '') {
+                            calculate();
+                        }
+                        previousInput = currentInput;
+                        operator = value;
+                        currentInput = '';
+                        resetDisplay = true;
+                        return;
+                    }
+
+                    if (value === '=') {
+                        if (previousInput === '' || currentInput === '' || operator === null) return;
+                        calculate();
+                        operator = null;
+                        resetDisplay = true;
+                        return;
+                    }
+
+                    if (value === '.') {
+                        if (resetDisplay) {
+                            currentInput = '0.';
+                            resetDisplay = false;
+                        } else if (!currentInput.includes('.')) {
+                            currentInput += '.';
+                        }
+                    } else {
+                        if (resetDisplay) {
+                            currentInput = value;
+                            resetDisplay = false;
+                        } else {
+                            currentInput += value;
+                        }
+                    }
+                    calculatorDisplay.textContent = currentInput;
+                });
+            });
+
+            function calculate() {
+                let result;
+                const prev = parseFloat(previousInput);
+                const current = parseFloat(currentInput);
+
+                if (isNaN(prev) || isNaN(current)) return;
+
+                switch (operator) {
+                    case '+':
+                        result = prev + current;
+                        break;
+                    case '-':
+                        result = prev - current;
+                        break;
+                    case '*':
+                        result = prev * current;
+                        break;
+                    case '/':
+                        if (current === 0) {
+                            showCustomModal('Error', 'Cannot divide by zero!');
+                            currentInput = '';
+                            previousInput = '';
+                            operator = null;
+                            calculatorDisplay.textContent = '0';
+                            return;
+                        }
+                        result = prev / current;
+                        break;
+                    case '%':
+                        result = prev % current;
+                        break;
+                    default:
+                        return;
+                }
+                currentInput = result.toString();
+                calculatorDisplay.textContent = currentInput;
+                previousInput = '';
+            }
+
+            // --- GPA and CGPA Calculator ---
+            const gpaInputsDiv = document.getElementById('gpa-inputs');
+            const addGpaRowBtn = document.getElementById('add-gpa-row');
+            const calculateGpaBtn = document.getElementById('calculate-gpa');
+            const gpaResults = document.getElementById('gpa-results');
+
+            const cgpaInputsDiv = document.getElementById('cgpa-inputs');
+            const addCgpaRowBtn = document.getElementById('add-cgpa-row');
+            const calculateCgpaBtn = document.getElementById('calculate-cgpa');
+            const cgpaResults = document.getElementById('cgpa-results');
+
+            function addGradeRow(container, type) {
+                const div = document.createElement('div');
+                div.classList.add('grade-input-group');
+                div.innerHTML = `
+                    <input type="number" placeholder="${type === 'gpa' ? 'Credit Hours' : 'Total Credits (Semester)'}" class="${type}-credit-input rounded-lg" min="0" step="0.1">
+                    <input type="number" placeholder="${type === 'gpa' ? 'Grade Point (e.g., 3.5)' : 'GPA (Semester)'}" class="${type}-grade-input rounded-lg" min="0" max="4" step="0.01">
+                    <button class="btn delete-grade-row"><i class="fas fa-trash"></i></button>
+                `;
+                container.appendChild(div);
+                div.querySelector('.delete-grade-row').addEventListener('click', () => {
+                    div.remove();
+                });
+            }
+
+            addGpaRowBtn.addEventListener('click', () => addGradeRow(gpaInputsDiv, 'gpa'));
+            addCgpaRowBtn.addEventListener('click', () => addGradeRow(cgpaInputsDiv, 'cgpa'));
+
+            function calculateGPA() {
+                let totalCreditHours = 0;
+                let totalGradePoints = 0;
+                const creditInputs = gpaInputsDiv.querySelectorAll('.gpa-credit-input');
+                const gradeInputs = gpaInputsDiv.querySelectorAll('.gpa-grade-input');
+
+                for (let i = 0; i < creditInputs.length; i++) {
+                    const credits = parseFloat(creditInputs[i].value);
+                    const grade = parseFloat(gradeInputs[i].value);
+
+                    if (!isNaN(credits) && !isNaN(grade)) {
+                        totalCreditHours += credits;
+                        totalGradePoints += (credits * grade);
+                    }
+                }
+
+                if (totalCreditHours > 0) {
+                    const gpa = (totalGradePoints / totalCreditHours).toFixed(2);
+                    gpaResults.textContent = `Your GPA: ${gpa}`;
+                } else {
+                    gpaResults.textContent = 'Please enter valid credit hours and grade points.';
+                }
+            }
+
+            function calculateCGPA() {
+                let totalCreditsOverall = 0;
+                let totalWeightedGPA = 0;
+                const creditInputs = cgpaInputsDiv.querySelectorAll('.cgpa-credit-input');
+                const gpaInputs = cgpaInputsDiv.querySelectorAll('.cgpa-gpa-input');
+
+                for (let i = 0; i < creditInputs.length; i++) {
+                    const credits = parseFloat(creditInputs[i].value);
+                    const gpa = parseFloat(gpaInputs[i].value);
+
+                    if (!isNaN(credits) && !isNaN(gpa)) {
+                        totalCreditsOverall += credits;
+                        totalWeightedGPA += (credits * gpa);
+                    }
+                }
+
+                if (totalCreditsOverall > 0) {
+                    const cgpa = (totalWeightedGPA / totalCreditsOverall).toFixed(2);
+                    cgpaResults.textContent = `Your CGPA: ${cgpa}`;
+                } else {
+                    cgpaResults.textContent = 'Please enter valid semester credits and GPAs.';
+                }
+            }
+
+            calculateGpaBtn.addEventListener('click', calculateGPA);
+            calculateCgpaBtn.addEventListener('click', calculateCGPA);
+
+            // Initial row for GPA/CGPA
+            addGradeRow(gpaInputsDiv, 'gpa');
+            addGradeRow(cgpaInputsDiv, 'cgpa');
+
+            // --- Currency Converter ---
+            const amountToConvertInput = document.getElementById('amount-to-convert');
+            const fromCurrencySelect = document.getElementById('from-currency');
+            const toCurrencySelect = document.getElementById('to-currency');
+            const convertCurrencyBtn = document.getElementById('convert-currency');
+            const conversionResult = document.getElementById('conversion-result');
+
+            // Hardcoded exchange rates relative to USD (as a base)
+            const exchangeRates = {
+                "BDT": 117.00, // 1 USD = 117 BDT (example rate)
+                "USD": 1.00,
+                "EUR": 0.92,
+                "AED": 3.67,
+                "INR": 83.50,
+                "PKR": 278.00,
+                "AUD": 1.50,
+                "SAR": 3.75,
+                "GBP": 0.79,
+                "CAD": 1.37,
+                "SGD": 1.35,
+                "JPY": 158.00,
+                "CNY": 7.25,
+                "KWD": 0.30, // 1 USD = 0.30 KWD
+                "QAR": 3.64,
+                "OMR": 0.38,
+                "BHD": 0.37,
+                "MYR": 4.70,
+                "THB": 36.70,
+                "PHP": 58.70,
+                "VND": 25400.00,
+                "KRW": 1380.00
+            };
+
+            convertCurrencyBtn.addEventListener('click', () => {
+                const amount = parseFloat(amountToConvertInput.value);
+                const fromCurrency = fromCurrencySelect.value;
+                const toCurrency = toCurrencySelect.value;
+
+                if (isNaN(amount) || amount <= 0) {
+                    showCustomModal('Input Error', 'Please enter a valid amount.');
+                    conversionResult.textContent = '';
+                    return;
+                }
+
+                if (!exchangeRates[fromCurrency] || !exchangeRates[toCurrency]) {
+                    showCustomModal('Error', 'Selected currency not found in rates.');
+                    conversionResult.textContent = 'Error: Currency not found.';
+                    return;
+                }
+
+                // Convert amount to USD first
+                const amountInUSD = amount / exchangeRates[fromCurrency];
+                // Then convert from USD to target currency
+                const convertedAmount = amountInUSD * exchangeRates[toCurrency];
+
+                conversionResult.textContent = `${amount.toFixed(2)} ${fromCurrency} = ${convertedAmount.toFixed(2)} ${toCurrency}`;
+            });
+
+            // --- Profile / Student Information System ---
+            const profileNameInput = document.getElementById('profile-name');
+            const profileMobileInput = document.getElementById('profile-mobile');
+            const profileWhatsappInput = document.getElementById('profile-whatsapp');
+            const profileFacebookInput = document.getElementById('profile-facebook');
+            const profileGithubInput = document.getElementById('profile-github');
+            const profileInstagramInput = document.getElementById('profile-instagram');
+            const profileGmailInput = document.getElementById('profile-gmail');
+            const profileBloodSelect = document.getElementById('profile-blood');
+            const profileImageUpload = document.getElementById('profile-image-upload');
+            const profileDisplayImage = document.getElementById('profile-display-image');
+            const saveProfileBtn = document.getElementById('save-profile');
+
+            const otherStudentNameInput = document.getElementById('other-student-name');
+            const otherStudentIdInput = document.getElementById('other-student-id');
+            const addOtherStudentBtn = document.getElementById('add-other-student');
+            const otherStudentsUl = document.getElementById('other-students-ul');
+
+            function loadProfile() {
+                const profileData = JSON.parse(localStorage.getItem('userProfile')) || {};
+                profileNameInput.value = profileData.name || '';
+                profileMobileInput.value = profileData.mobile || '';
+                profileWhatsappInput.value = profileData.whatsapp || '';
+                profileFacebookInput.value = profileData.facebook || '';
+                profileGithubInput.value = profileData.github || '';
+                profileInstagramInput.value = profileData.instagram || '';
+                profileGmailInput.value = profileData.gmail || '';
+                profileBloodSelect.value = profileData.blood || '';
+                if (profileData.image) {
+                    profileDisplayImage.src = profileData.image;
+                }
+            }
+
+            function saveProfile() {
+                const profileData = {
+                    name: profileNameInput.value,
+                    mobile: profileMobileInput.value,
+                    whatsapp: profileWhatsappInput.value,
+                    facebook: profileFacebookInput.value,
+                    github: profileGithubInput.value,
+                    instagram: profileInstagramInput.value,
+                    gmail: profileGmailInput.value,
+                    blood: profileBloodSelect.value,
+                    image: profileDisplayImage.src // Save base64 image
+                };
+                localStorage.setItem('userProfile', JSON.stringify(profileData));
+                showCustomModal('Success', 'Profile saved successfully!');
+            }
+
+            profileImageUpload.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        profileDisplayImage.src = e.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+
+            saveProfileBtn.addEventListener('click', saveProfile);
+            loadProfile();
+
+            let otherStudents = JSON.parse(localStorage.getItem('otherStudents')) || [];
+
+            function renderOtherStudents() {
+                otherStudentsUl.innerHTML = '';
+                if (otherStudents.length === 0) {
+                    otherStudentsUl.innerHTML = '<li class="text-gray-400">No other student data added yet.</li>';
+                }
+                otherStudents.forEach((student, index) => {
+                    const li = document.createElement('li');
+                    li.classList.add('flex', 'justify-between', 'items-center', 'mb-2', 'p-2', 'rounded-lg', 'bg-input-bg');
+                    li.innerHTML = `
+                        <span><strong>${student.name}</strong> (ID: ${student.id})</span>
+                        <button class="btn delete-other-student-btn" data-index="${index}"><i class="fas fa-trash"></i></button>
+                    `;
+                    otherStudentsUl.appendChild(li);
+                });
+                document.querySelectorAll('.delete-other-student-btn').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        const index = parseInt(e.currentTarget.dataset.index);
+                        otherStudents.splice(index, 1);
+                        localStorage.setItem('otherStudents', JSON.stringify(otherStudents));
+                        renderOtherStudents();
+                    });
+                });
+            }
+
+            addOtherStudentBtn.addEventListener('click', () => {
+                const name = otherStudentNameInput.value.trim();
+                const id = otherStudentIdInput.value.trim();
+                if (name && id) {
+                    otherStudents.push({ name, id });
+                    localStorage.setItem('otherStudents', JSON.stringify(otherStudents));
+                    otherStudentNameInput.value = '';
+                    otherStudentIdInput.value = '';
+                    renderOtherStudents();
+                    showCustomModal('Success', 'Other student data added locally!');
+                } else {
+                    showCustomModal('Input Error', 'Please enter both name and ID for the student.');
+                }
+            });
+            renderOtherStudents();
+
+            // --- Math Solver (Placeholder) ---
+            const mathInput = document.getElementById('math-input');
+            const solveMathBtn = document.getElementById('solve-math');
+            const mathSolutionDiv = document.getElementById('math-solution');
+            const mathSolutionText = mathSolutionDiv.querySelector('p');
+
+            solveMathBtn.addEventListener('click', () => {
+                const equation = mathInput.value.trim();
+                if (equation) {
+                    mathSolutionText.innerHTML = `Attempting to solve: <em>"${equation}"</em><br><br>
+                        <strong>Simulated Solution:</strong> This is a complex mathematical problem. In a real application, a powerful symbolic math engine (often server-side) would be required to provide an accurate solution. For now, imagine the solution appears here!`;
+                    mathSolutionDiv.classList.remove('hidden');
+                } else {
+                    showCustomModal('Input Error', 'Please enter an equation to solve.');
+                    mathSolutionDiv.classList.add('hidden');
+                }
+            });
+
+            // --- Knowledge Base ---
+            const knowledgeDetailSection = document.getElementById('knowledge-detail');
+            const knowledgeDetailTitle = document.getElementById('knowledge-detail-title');
+            const knowledgeDetailContent = document.getElementById('knowledge-detail-content');
+
+            const knowledgeData = {
+                physics: {
+                    title: "Physics Fundamentals",
+                    content: `
+                        <p><strong>Newton's Laws of Motion:</strong></p>
+                        <ul class="list-disc list-inside ml-4">
+                            <li>First Law (Inertia): An object at rest stays at rest, and an object in motion stays in motion with the same speed and in the same direction unless acted upon by an unbalanced force.</li>
+                            <li>Second Law (F=ma): The acceleration of an object as produced by a net force is directly proportional to the magnitude of the net force, in the same direction as the net force, and inversely proportional to the mass of the object.</li>
+                            <li>Third Law (Action-Reaction): For every action, there is an equal and opposite reaction.</li>
+                        </ul>
+                        <p class="mt-4"><strong>Law of Conservation of Energy:</strong> Energy cannot be created or destroyed, but it can be transformed from one form to another.</p>
+                        <p class="mt-4"><strong>Electromagnetic Spectrum:</strong> The range of all types of EM radiation, from radio waves to gamma rays.</p>
+                    `
+                },
+                electronics: {
+                    title: "Basic Electronics",
+                    content: `
+                        <p><strong>Ohm's Law:</strong> States that the current through a conductor between two points is directly proportional to the voltage across the two points. $V = I \times R$</p>
+                        <p class="mt-4"><strong>Kirchhoff's Laws:</strong></p>
+                        <ul class="list-disc list-inside ml-4">
+                            <li>Current Law (KCL): The sum of currents entering a junction equals the sum of currents leaving it.</li>
+                            <li>Voltage Law (KVL): The sum of all voltages around any closed loop in a circuit is zero.</li>
+                        </ul>
+                        <p class="mt-4"><strong>Resistors:</strong> Components that resist the flow of electric current. <strong>Capacitors:</strong> Store electrical energy in an electric field. <strong>Inductors:</strong> Store energy in a magnetic field.</p>
+                        <p class="mt-4"><strong>Diodes:</strong> Allow current to flow in one direction. <strong>Transistors:</strong> Act as electronic switches or amplifiers.</p>
+                    `
+                },
+                electrics: {
+                    title: "Electrics Concepts",
+                    content: `
+                        <p><strong>Electric Charge:</strong> A fundamental property of matter that causes it to experience a force when placed in an electromagnetic field. Measured in Coulombs (C).</p>
+                        <p class="mt-4"><strong>Electric Current:</strong> The flow of electric charge. Measured in Amperes (A).</p>
+                        <p class="mt-4"><strong>Voltage (Potential Difference):</strong> The electric potential energy difference per unit charge between two points in a circuit. Measured in Volts (V).</p>
+                        <p class="mt-4"><strong>Resistance:</strong> A measure of the opposition to the flow of electric current. Measured in Ohms ($\Omega$).</p>
+                        <p class="mt-4"><strong>Power:</strong> The rate at which electrical energy is transferred or consumed. Measured in Watts (W). $P = V \times I$</p>
+                        <p class="mt-4"><strong>AC (Alternating Current):</strong> Current that periodically reverses direction. <strong>DC (Direct Current):</strong> Current that flows in only one direction.</p>
+                    `
+                }
+            };
+
+            window.showKnowledgeDetail = function(topic) {
+                const data = knowledgeData[topic];
+                if (data) {
+                    knowledgeDetailTitle.textContent = data.title;
+                    knowledgeDetailContent.innerHTML = data.content;
+                    knowledgeDetailSection.classList.remove('hidden');
+                    // Hide other cards and show only knowledge base
+                    sections.forEach(section => section.classList.add('hidden'));
+                    document.getElementById('knowledge-base').classList.remove('hidden');
+                }
+            };
+
+            window.hideKnowledgeDetail = function() {
+                knowledgeDetailSection.classList.add('hidden');
+            };
+
+            // --- Media Explore (Upload & Display) ---
+            const mediaUploadInput = document.getElementById('media-upload-input');
+            const uploadMediaBtn = document.getElementById('upload-media-btn');
+            const mediaDisplayGrid = document.getElementById('media-display-grid');
+            let uploadedMedia = JSON.parse(localStorage.getItem('uploadedMedia')) || [];
+
+            function renderMedia() {
+                mediaDisplayGrid.innerHTML = '';
+                uploadedMedia.forEach((media, index) => {
+                    const mediaItem = document.createElement('div');
+                    mediaItem.classList.add('media-item');
+                    if (media.type.startsWith('image')) {
+                        mediaItem.innerHTML = `<img src="${media.src}" alt="Uploaded Image">`;
+                    } else if (media.type.startsWith('video')) {
+                        mediaItem.innerHTML = `<video src="${media.src}" controls></video>`;
+                    }
+                    // Add a delete button
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.classList.add('btn', 'absolute', 'top-2', 'right-2', 'p-1', 'rounded-full', 'bg-red-600', 'text-white', 'text-xs');
+                    deleteBtn.innerHTML = '<i class="fas fa-times"></i>';
+                    deleteBtn.onclick = () => {
+                        uploadedMedia.splice(index, 1);
+                        localStorage.setItem('uploadedMedia', JSON.stringify(uploadedMedia));
+                        renderMedia();
+                    };
+                    mediaItem.appendChild(deleteBtn);
+                    mediaDisplayGrid.appendChild(mediaItem);
+                });
+            }
+
+            uploadMediaBtn.addEventListener('click', () => {
+                const files = mediaUploadInput.files;
+                if (files.length === 0) {
+                    showCustomModal('No Files', 'Please select files to upload.');
+                    return;
+                }
+
+                Array.from(files).forEach(file => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        uploadedMedia.push({ src: e.target.result, type: file.type });
+                        localStorage.setItem('uploadedMedia', JSON.stringify(uploadedMedia));
+                        renderMedia();
+                    };
+                    reader.readAsDataURL(file);
+                });
+                mediaUploadInput.value = ''; // Clear input
+                showCustomModal('Success', `${files.length} media item(s) uploaded locally!`);
+            });
+            renderMedia();
+
+            // --- Memes Section ---
+            const memeUploadInput = document.getElementById('meme-upload-input');
+            const uploadMemeBtn = document.getElementById('upload-meme-btn');
+            const generateMemeIdeaBtn = document.getElementById('generate-meme-idea-btn');
+            const memeIdeaDisplay = document.getElementById('meme-idea-display');
+            const memeIdeaText = document.getElementById('meme-idea-text');
+            const memeDisplayGrid = document.getElementById('meme-display-grid');
+            let uploadedMemes = JSON.parse(localStorage.getItem('uploadedMemes')) || [];
+
+            function renderMemes() {
+                memeDisplayGrid.innerHTML = '';
+                uploadedMemes.forEach((meme, index) => {
+                    const memeItem = document.createElement('div');
+                    memeItem.classList.add('meme-item');
+                    if (meme.type.startsWith('image')) {
+                        memeItem.innerHTML = `<img src="${meme.src}" alt="Meme">`;
+                    } else if (meme.type.startsWith('video')) {
+                        memeItem.innerHTML = `<video src="${meme.src}" controls></video>`;
+                    }
+
+                    const actionsDiv = document.createElement('div');
+                    actionsDiv.classList.add('meme-actions');
+                    actionsDiv.innerHTML = `
+                        <button title="Like"><i class="fas fa-heart"></i></button>
+                        <button title="Save"><i class="fas fa-save"></i></button>
+                        <button title="Share"><i class="fas fa-share-alt"></i></button>
+                        <button title="Delete" class="delete-meme-btn" data-index="${index}"><i class="fas fa-trash"></i></button>
+                    `;
+                    memeItem.appendChild(actionsDiv);
+                    memeDisplayGrid.appendChild(memeItem);
+                });
+
+                document.querySelectorAll('.delete-meme-btn').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        const index = parseInt(e.currentTarget.dataset.index);
+                        uploadedMemes.splice(index, 1);
+                        localStorage.setItem('uploadedMemes', JSON.stringify(uploadedMemes));
+                        renderMemes();
+                    });
+                });
+                // Add functionality for like, save, share (simulated)
+                document.querySelectorAll('.meme-actions button:not(.delete-meme-btn)').forEach(button => {
+                    button.addEventListener('click', () => {
+                        showCustomModal('Action', `You clicked ${button.title}! (Simulated action)`);
+                    });
+                });
+            }
+
+            uploadMemeBtn.addEventListener('click', () => {
+                const files = memeUploadInput.files;
+                if (files.length === 0) {
+                    showCustomModal('No Files', 'Please select meme files to upload.');
+                    return;
+                }
+
+                Array.from(files).forEach(file => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        uploadedMemes.push({ src: e.target.result, type: file.type });
+                        localStorage.setItem('uploadedMemes', JSON.stringify(uploadedMemes));
+                        renderMemes();
+                    };
+                    reader.readAsDataURL(file);
+                });
+                memeUploadInput.value = ''; // Clear input
+                showCustomModal('Success', `${files.length} meme(s) uploaded locally!`);
+            });
+
+            generateMemeIdeaBtn.addEventListener('click', async () => {
+                memeIdeaText.textContent = 'Generating meme idea...';
+                memeIdeaDisplay.classList.remove('hidden');
+
+                try {
+                    let chatHistory = [];
+                    chatHistory.push({ role: "user", parts: [{ text: "Generate a funny and creative meme idea. Provide a short description of the image/video and the text overlay. Avoid any offensive or 18+ content." }] });
+                    const payload = { contents: chatHistory };
+                    const apiKey = ""; // Canvas will provide this
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+                    const response = await fetch(apiUrl, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(payload)
+                            });
+                    const result = await response.json();
+
+                    if (result.candidates && result.candidates.length > 0 &&
+                        result.candidates[0].content && result.candidates[0].content.parts &&
+                        result.candidates[0].content.parts.length > 0) {
+                        const text = result.candidates[0].content.parts[0].text;
+                        memeIdeaText.textContent = text;
+                    } else {
+                        memeIdeaText.textContent = 'Failed to generate meme idea. Please try again.';
+                        console.error('Gemini API response structure unexpected:', result);
+                    }
+                } catch (error) {
+                    memeIdeaText.textContent = 'Error generating meme idea: ' + error.message;
+                    console.error('Error calling Gemini API:', error);
+                }
+            });
+
+            renderMemes();
+        };
+    </script>
+</body>
+</html>
